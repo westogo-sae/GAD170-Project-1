@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class DialogueManager : MonoBehaviour
 {
+    public GameObject dialogueContainer;
     [SerializeField]
     private TMP_Text dialogueOut;
     [SerializeField]
@@ -14,17 +16,22 @@ public class DialogueManager : MonoBehaviour
     [SerializeField]
     private SpriteRenderer iconOut;
 
-    public GameObject buttonPrefab;
+    [Tooltip("The prefab used to create option buttons, should contain button component on highest level and a text componenet in child")]
+    public GameObject optionButtonPrefab;
     private GameObject[] activeButtons;
-    public RectTransform horizontalBounds;
-    public RectTransform verticalBounds; // unimplemented
+    [Tooltip("bounding box for buttons to be packed in")]
+    public RectTransform buttonBounds;
 
+    [Tooltip("Input Action used to continue to next dialogue")]
     public InputAction continueAction;
 
-    private bool hasOptions;
+    private bool hasOptions = true;
     private bool canContinue;
 
     public static DialogueManager Instance;
+
+    private DialogueStream activeStream;
+    private Coroutine activeRoutine;
 
     #region Enable/Disable continueAction
 
@@ -60,27 +67,109 @@ public class DialogueManager : MonoBehaviour
             Instance = this;
         }
 
-        GameObject buttonObj = new GameObject();
     }
 
+    public void showUI()
+    {
+        dialogueContainer.SetActive(true);
+    }
+
+    public void hideUI()
+    {
+        dialogueContainer.SetActive(false);
+    }
+
+   
 
     /// <summary>
-    /// Packs a dialogue's content to the applicable components, WaitUntilDialogueContinue should be used after this to prevent errors
+    /// Plays a dialogue Stream, deos not require WaitUntilDialogueContinue to be called
+    /// </summary>
+    /// <param name="dialogueStream">The dialogue stream to be played</param>
+    public void PlayStream(DialogueStream dialogueStream)
+    {
+        if(dialogueStream == null)
+        {
+            Debug.LogError("Cannot Play Unassigned Dialogue Stream");
+            return;
+        }
+        if(activeRoutine != null)
+        {
+            StopActiveStream();
+        }
+        activeStream = dialogueStream;
+        activeRoutine = StartCoroutine(RunStream());
+        showUI();
+    }
+
+    /// <summary>
+    /// Plays only a single piece of dialogue, WaitUntilDialogueContinue should be used after this to function as intended
+    /// </summary>
+    /// <param name="dialogue">The dialogue to be played</param>
+    public void PlaySingle(Dialogue dialogue)
+    {
+        if (dialogue == null)
+        {
+            Debug.LogError("Cannot Play Unassigned Dialogue");
+            return;
+        }
+        if (activeRoutine != null)
+        {
+            StopActiveStream();
+        }
+        packDialogue(dialogue);
+        showUI();
+    }
+
+    public void StopActiveStream()
+    {
+        StopCoroutine(activeRoutine);
+        activeRoutine = null;
+        activeStream = null;
+        hideUI();
+    }
+
+    private IEnumerator RunStream()
+    {
+        foreach (Dialogue dialogue in activeStream.dialogue)
+        {
+            packDialogue(dialogue);
+            yield return WaitUntilDialogueContinue();
+            dialogue.OnDialogueComplete.Invoke();
+        }
+
+        DialogueStream nextStream = activeStream.nextStream;
+
+        activeStream = null;
+        activeRoutine = null;
+
+        if (nextStream != null)
+        {
+            PlayStream(nextStream);
+        }else
+        {
+            hideUI();
+        }
+    }
+
+    /// <summary>
+    /// Packs a dialogue's content to the applicable components, WaitUntilDialogueContinue should be used after this to function as intended
     /// </summary>
     /// <param name="dialogue">The dialogue to be packed</param>
-    public void packDialogue(Dialogue dialogue)
+    private void packDialogue(Dialogue dialogue)
     {
-        if (dialogue.name != null) nameOut.text = dialogue.name;
+        if (nameOut != null && dialogue.name != null) nameOut.text = dialogue.name;
 
-        if (dialogue.text != null) dialogueOut.text = dialogue.text;
+        if (dialogueOut != null && dialogue.text != null) dialogueOut.text = dialogue.text;
 
-        if (dialogue.icon != null) iconOut.sprite = dialogue.icon;
+        if (iconOut != null && dialogue.icon != null) iconOut.sprite = dialogue.icon;
+
+        //destroy old buttons
+        destroyButtons();
 
         if (dialogue.options.Length > 0)
         {
             hasOptions = true;
             // sets up button gameobjects and components
-            destroyButtons();
             packOptionButtons(dialogue.options, dialogue.layout);
         }
         else
@@ -90,11 +179,15 @@ public class DialogueManager : MonoBehaviour
 
     private void destroyButtons()
     {
-        foreach(GameObject buttonObj in activeButtons)
+        if (activeButtons != null)
         {
-            Destroy(buttonObj);
+            foreach (GameObject buttonObj in activeButtons)
+            {
+                Destroy(buttonObj);
+            }
+
+            activeButtons = null;
         }
-        activeButtons = null;
     }
 
     private void packOptionButtons(Dialogue.DialogueOption[] options, Dialogue.Layout layout = Dialogue.Layout.Horizontal)
@@ -104,37 +197,43 @@ public class DialogueManager : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
+            if(buttonBounds == null)
+                Debug.LogError("button bounds not assigned");
+
+            activeButtons[i] = Instantiate(optionButtonPrefab, buttonBounds);
+
             switch (layout)
             {
                 case Dialogue.Layout.Horizontal:
-                    activeButtons[i] = Instantiate(buttonPrefab, horizontalBounds);
 
                     //streatch button to fit bounds
                     RectTransform buttonTrans = activeButtons[i].GetComponent<RectTransform>();
-                    buttonTrans.anchorMin = new Vector2(i/count, buttonTrans.anchorMin.y);
-                    buttonTrans.anchorMax = new Vector2((i+1)/count, buttonTrans.anchorMin.y);
+                    buttonTrans.anchorMin = new Vector2((float)i /count, buttonTrans.anchorMin.y);
+                    buttonTrans.anchorMax = new Vector2((float)(i+1)/count, buttonTrans.anchorMax.y);
                     break;
                 default:
-                    Debug.LogError("Layout not implemented Exception");
+                    Debug.LogError(layout.ToString() + " layout not implemented");
                     break;
             }
+
             //change button text
-            activeButtons[i].GetComponentInChildren<Text>().text = options[i].optionText;
+            activeButtons[i].GetComponentInChildren<TMP_Text>().text = options[i].optionText;
 
             //add listeners to button
             Button button = activeButtons[i].GetComponent<Button>();
             button.onClick.AddListener(options[i].Invoke);
-            button.onClick.AddListener(() => canContinue = true);
 
-            
+            //change stream only if one is available, otherwise continue after choice made
+            if (options[i].optionStream == null)
+            {
+                button.onClick.AddListener(() => canContinue = true);
+            }
         }
     }
 
     public IEnumerator WaitUntilDialogueContinue()
     {
-        
         yield return new WaitUntil(() => canContinue);
-
         canContinue = false;
     }
 

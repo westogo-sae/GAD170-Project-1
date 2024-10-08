@@ -1,50 +1,86 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
+
+[Serializable]
 public class Dialogue
 {
-    public string name { get; private set;}
-    public string text { get; private set; }
-    public Sprite icon { get; private set; }
-    public DialogueOption[] options { get; private set; }
+    [Tooltip("The name displayed with the dialogue")]
+    public string name;
 
+    [Tooltip("The icon displayed with the dialogue")]
+    public Sprite icon;
+
+    [Tooltip("The text of the dialogue")]
+    [TextArea] public string text;
+
+    [Tooltip("The Layout of the dialogue buttons")]
     public Layout layout = Layout.Horizontal; //default to horizontal
+
+    [Tooltip("Options available to dialogue")]
+    public DialogueOption[] options;
+
+    [Tooltip("Events executed after user continues, does not execute if an option changes stream")]
+    public UnityEvent OnDialogueComplete;
+
+    //unimplemented
+    //public bool waitForInput = true;
+
 
 
     public delegate void dialogueDelegate();
+
+    #region Dialogue Option
+
+    [Serializable]
     /// <summary>
     /// Container for the text and event of an option/button. Can be left empty to have no options.
     /// </summary>
     public class DialogueOption
     {
+        [Tooltip("Text displayed on option button")]
         public string optionText;
-        private dialogueDelegate optionDelegate;
 
-        public DialogueOption(string Text, dialogueDelegate Delegate = null)
+        [Tooltip("Switch to stream if option chosen, leave empty to not change stream")]
+        public DialogueStream optionStream;
+
+        [Tooltip("Events executed if option chosen")]
+        public UnityEvent optionEvent;
+
+        public DialogueOption(string Text, UnityAction action = null)
         {
             optionText = Text;
-            optionDelegate = Delegate;
+
+            if (action != null)
+                optionEvent.AddListener(action);
         }
+
 
         /// <summary>
         /// Attaches a new delegate to the dialgue option
         /// </summary>
         /// <param name="Event">The new delegate to use</param>
-        public void SetEvent(dialogueDelegate Delegate)
+        public void addAction(UnityAction action)
         {
-            optionDelegate = Delegate;
+            optionEvent.AddListener(action);
         }
 
+        
         /// <summary>
-        /// calls the delegate attached to this dialogue option
+        /// calls the event attached to this dialogue option and play the stream assossiated if not empty
         /// </summary>
         public void Invoke()
         {
-            if(optionDelegate != null)
-                optionDelegate.Invoke();
+            optionEvent.Invoke();
+            if (optionStream != null)
+                DialogueManager.Instance.PlayStream(optionStream);
         }
     }
+
+    #endregion
 
     public enum Layout
     {
@@ -52,46 +88,13 @@ public class Dialogue
         Vertical
     }
 
-    #region Value Setters
-    /// <summary>
-    /// Sets the Name/Title of the dialogue
-    /// </summary>
-    public void setName(string Name)
-    {
-        name = Name;
-    }
-    /// <summary>
-    /// Sets the Text of the dialogue
-    /// </summary>
-    public void setText(string Text)
-    {
-        text = Text;
-    }
-    /// <summary>
-    /// Sets the Icon of the dialogue
-    /// </summary>
-    public void setIcon(Sprite Icon)
-    {
-        icon = Icon;
-    }
-    /// <summary>
-    /// Sets the options of the dialogue
-    /// </summary>
-    public void setOptions(params DialogueOption[] Options)
-    {
-        options = Options;
-    }
-    /// <summary>
-    /// Sets the all values of the dialogue
-    /// </summary>
+
     public void setAll(string Name, string Text, Sprite Icon, params DialogueOption[] Options)
     {
-        setName(Name);
-        setText(Text);
-        setIcon(Icon);
-        setOptions(Options);
+        name = Name;
+        text = Text;
+        icon = Icon;
+        options = Options;
     }
-
-    #endregion
 
 }

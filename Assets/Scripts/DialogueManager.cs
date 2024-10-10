@@ -38,7 +38,7 @@ public class DialogueManager : MonoBehaviour
     private void OnEnable()
     {
         continueAction.Enable();
-        continueAction.performed += (Continue);
+        continueAction.performed += (ContinueAction);
     }
 
     private void OnDisable()
@@ -46,12 +46,17 @@ public class DialogueManager : MonoBehaviour
         continueAction.Disable();
     }
 
-    private void Continue(InputAction.CallbackContext context)
+    private void ContinueAction(InputAction.CallbackContext context)
     {
-        if(!hasOptions)
+        if (!hasOptions)
         {
-            canContinue = true;
+            Continue();
         }
+    }
+
+    public void Continue()
+    {
+        canContinue = true;
     }
 
     #endregion
@@ -119,6 +124,7 @@ public class DialogueManager : MonoBehaviour
         packDialogue(dialogue);
         showUI();
     }
+
 
     public void StopActiveStream()
     {
@@ -229,6 +235,15 @@ public class DialogueManager : MonoBehaviour
                 button.onClick.AddListener(() => canContinue = true);
             }
         }
+    }
+
+    /// <summary>
+    /// modifys the dialogue text without changing any other dialgue settings
+    /// </summary>
+    /// <param name="text">changes the current text to this string</param>
+    public void ModifyText(string text)
+    {
+        dialogueOut.text = text;
     }
 
     public IEnumerator WaitUntilDialogueContinue()

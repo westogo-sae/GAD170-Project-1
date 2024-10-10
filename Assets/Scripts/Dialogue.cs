@@ -33,6 +33,14 @@ public class Dialogue
 
     public delegate void dialogueDelegate();
 
+    public Dialogue(string name = null, Sprite icon = null, string text = null,params DialogueOption[] options)
+    {
+        this.name = name;
+        this.icon = icon;
+        this.text = text;
+        this.options = options;
+    }
+
     #region Dialogue Option
 
     [Serializable]

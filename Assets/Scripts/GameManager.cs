@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using UnityEngine;
+
 
 public class GameManager : MonoBehaviour
 {
@@ -8,16 +10,17 @@ public class GameManager : MonoBehaviour
     public ShopItem[] shopItems;
 
 
+
     public DialogueStream defaultDialogueStream;
 
     public bool gameOver;
 
-    int playerLevel;
-    int playerXP;
-    int levelUpThreashold;
-    int playerAttack;
-    int playerHealth;
-    int playerGold;
+    private int playerLevel;
+    private int playerXP;
+    private int levelUpThreashold;
+    private int playerAttack;
+    private int playerHealth;
+    public int playerGold;
 
 
     enum RoomType
@@ -56,11 +59,14 @@ public class GameManager : MonoBehaviour
 
             //bonus: show dialogue to let the player know the they have moved on
             DialogueManager.Instance.PlaySingle(new Dialogue(text: "You continue to the next room"));
+
             yield return DialogueManager.Instance.WaitUntilDialogueContinue();
 
             //select a random room
-            currentRoom = (RoomType)Random.Range(0, 3);
+            //currentRoom = (RoomType)Random.Range(0, 3);
+            currentRoom = 0;
 
+            ///////// logic for shop room
             if(currentRoom == RoomType.SHOP)
             {
                 //display shop items with new random costs
@@ -71,14 +77,20 @@ public class GameManager : MonoBehaviour
                 }
 
                 //shop dialogue
-                string dialogueText = "You encounter three items in the room a rugged sign reads \"DO NOT STEAL\" ... better safe than sorry";
+                string message = "You encounter three items in the room a rugged sign reads \"DO NOT STEAL\" ... better safe than sorry";
                 //create dialogue with a continue option
-                Dialogue dialogue = new Dialogue(text: dialogueText, options: new Dialogue.DialogueOption("Continue", ContinueDialogue));
+                Dialogue dialogue = new Dialogue(text: message, options: new Dialogue.DialogueOption("Continue", ContinueDialogue));
                 //play dialogue
                 DialogueManager.Instance.PlaySingle(dialogue);
 
                 //wait until the player continues
                 yield return DialogueManager.Instance.WaitUntilDialogueContinue();
+
+                //disable all shop items after continue
+                foreach(ShopItem item in shopItems)
+                {
+                    item.gameObject.SetActive(false);
+                }
 
             }
 
@@ -99,13 +111,8 @@ public class GameManager : MonoBehaviour
 
 
         }
-        yield return null;
     }
 
-    void GenerateShopItems()
-    {
-
-    }
 
     public void IncreaseAttack(int amount)
     {
@@ -125,11 +132,12 @@ public class GameManager : MonoBehaviour
     }
     public bool CanPlayerAfford(int cost)
     {
-        return cost >= playerGold;
+        return playerGold >= cost;
     }
 
     public void ContinueDialogue()
     {
         DialogueManager.Instance.Continue();
     }
+
 }

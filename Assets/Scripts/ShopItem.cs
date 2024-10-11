@@ -28,6 +28,8 @@ public class ShopItem : MonoBehaviour
             gameObject.SetActive(false);
             DialogueManager.Instance.ModifyText("Your Attack Increased!!");
         }
+        else
+            DialogueManager.Instance.ModifyText("You can't afford that");
     }
     public void buyHealth()
     {
@@ -40,6 +42,8 @@ public class ShopItem : MonoBehaviour
             gameObject.SetActive(false);
             DialogueManager.Instance.ModifyText("Your Health Increased!!");
         }
+        else
+            DialogueManager.Instance.ModifyText("You can't afford that");
     }
     public void buyXP()
     {
@@ -52,5 +56,7 @@ public class ShopItem : MonoBehaviour
             gameObject.SetActive(false);
             DialogueManager.Instance.ModifyText("Your XP Increased!!");
         }
+        else
+            DialogueManager.Instance.ModifyText("You can't afford that");
     }
 }

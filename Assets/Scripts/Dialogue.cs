@@ -56,7 +56,7 @@ public class Dialogue
         public DialogueStream optionStream;
 
         [Tooltip("Events executed if option chosen")]
-        public UnityEvent optionEvent;
+        public UnityEvent optionEvent = new UnityEvent();
 
         public DialogueOption(string Text, UnityAction action = null)
         {

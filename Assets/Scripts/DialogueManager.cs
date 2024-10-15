@@ -25,7 +25,7 @@ public class DialogueManager : MonoBehaviour
     [Tooltip("Input Action used to continue to next dialogue")]
     public InputAction continueAction;
 
-    private bool hasOptions = true;
+    public bool clickToContinue = true;
     private bool canContinue;
 
     public static DialogueManager Instance;
@@ -48,7 +48,7 @@ public class DialogueManager : MonoBehaviour
 
     private void ContinueAction(InputAction.CallbackContext context)
     {
-        if (!hasOptions)
+        if (clickToContinue)
         {
             Continue();
         }
@@ -143,7 +143,15 @@ public class DialogueManager : MonoBehaviour
             dialogue.OnDialogueComplete.Invoke();
         }
 
-        DialogueStream nextStream = activeStream.nextStream;
+        if(activeStream == null)
+            yield break;
+        
+        DialogueStream nextStream;
+        if(activeStream.nextStream == null)
+            nextStream = null;
+        else
+            nextStream = activeStream.nextStream;
+
 
         activeStream = null;
         activeRoutine = null;
@@ -172,14 +180,13 @@ public class DialogueManager : MonoBehaviour
         //destroy old buttons
         destroyButtons();
 
+        clickToContinue = dialogue.clickToContinue;
+
         if (dialogue.options.Length > 0)
         {
-            hasOptions = true;
             // sets up button gameobjects and components
             packOptionButtons(dialogue.options, dialogue.layout);
         }
-        else
-            hasOptions = false;
     }
 
 

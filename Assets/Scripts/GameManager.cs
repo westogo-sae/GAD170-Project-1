@@ -249,6 +249,7 @@ public class GameManager : MonoBehaviour
                         //no enemies move on to next room
                         message = "The room is empty...";
                         DialogueManager.Instance.PlaySingle(new Dialogue(text:message));
+                        yield return DialogueManager.Instance.WaitUntilDialogueContinue();
                         //skip to next loop
                         continue;
                     }else
